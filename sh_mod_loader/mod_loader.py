@@ -78,16 +78,14 @@ class Mod:
         pass
 
 
-class ModLoader:
-    def load_python_package(path: str):
-        print(f"Loading package '{path}'...")
+type Processor = Callable[[str, ModLoader], None]
 
+
+class ModLoader:
     loaded_mods: list[Mod] = []
     mods_will_loaded: list[str] = []
 
-    processors: dict[str, Callable[[str], None]] = {
-        "python_packages": load_python_package
-    }
+    processors: dict[str, Processor] = {}
 
     def __init__(self):
         pass
@@ -145,6 +143,12 @@ class ModLoader:
                     if element_type_dir.name in self.processors:
                         for element_dir in os.scandir(element_type_dir):
                             if os.path.isdir(element_dir):
-                                self.processors[element_type_dir.name](element_dir.name)
+                                try:
+                                    self.processors[element_type_dir.name](
+                                        element_dir.name, self
+                                    )
+
+                                finally:
+                                    pass
 
         mod.on_load()
