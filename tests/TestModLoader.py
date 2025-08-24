@@ -58,5 +58,4 @@ class TestModLoader(unittest.TestCase):
             print(f"Loading '{path}'...")
 
         mod_loader = sh_mod_loader.mod_loader.ModLoader()
-        mod_loader.processors |= {"test_elements": load_test_element}
         mod_loader.load_mod("tests/test_mod_8")

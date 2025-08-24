@@ -1,8 +1,6 @@
 import pkg_resources
-import importlib
+import sys
 import os
-from pathlib import Path
-from typing import Callable
 
 
 class ModLoadingException(Exception):
@@ -60,6 +58,23 @@ class ModElementNotImplementsInterface(InvalidModException):
         super().__init__(*args)
 
 
+class LoggerInterface:
+    def debug(self, msg):
+        pass
+
+    def info(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
+
+    def critical(self, msg):
+        pass
+
+
 class Mod:
     name: str
     title: str = "Untitled mod"
@@ -78,14 +93,11 @@ class Mod:
         pass
 
 
-type Processor = Callable[[str, ModLoader], None]
-
-
 class ModLoader:
     loaded_mods: list[Mod] = []
     mods_will_loaded: list[str] = []
 
-    processors: dict[str, Processor] = {}
+    mod_loader_globals = {}
 
     def __init__(self):
         pass
@@ -99,27 +111,26 @@ class ModLoader:
                 f"Directory {path} is not mod because it is not contains 'mod.py'"
             )
 
-        mod_package_dir = (
-            os.path.relpath(path, start=os.path.curdir)
-            .replace("/", ".")
-            .replace("\\", ".")
-        )
+        sys.path.append(path)
 
-        print(f"Mod package dir: {mod_package_dir}")
-        mod_module = importlib.import_module(".mod", mod_package_dir)
+        mod: Mod
+        with open(f"{path}/mod.py") as fin:
+            mod_locals: dict = {}
+            mod_globals: dict = {}
+            exec(fin.read(), mod_globals, mod_locals)
 
-        if not hasattr(mod_module, "init"):
-            raise PackageIsNotMod(
-                f"Package '{mod_package_dir}' not implements mod package interface"
-            )
+            if "init" not in mod_locals:
+                raise PackageIsNotMod(
+                    f"Package '{path}/mod.py' is not mod because mod_locals ({mod_locals}) is not contains 'init()'"
+                )
 
-        mod: Mod = mod_module.init()
+            mod = eval("init()", mod_globals, mod_locals)
 
         if not isinstance(mod, Mod):
             raise ModNotImplementsInterface(f"Mod is not implements interface")
 
         if not hasattr(mod, "name"):
-            raise ModNotHaveName(f"Mod '{mod_package_dir}' not have name")
+            raise ModNotHaveName(f"Mod not have name")
 
         for required_mod in mod.requires_mods:
             if required_mod not in self.mods_will_loaded:
@@ -140,15 +151,17 @@ class ModLoader:
         for element_type_dir in os.scandir(path):
             if os.path.isdir(element_type_dir):
                 if not element_type_dir.name.startswith("."):
-                    if element_type_dir.name in self.processors:
+                    if hasattr(self, f"process_{element_type_dir.name}"):
+                        processor = getattr(self, f"process_{element_type_dir.name}")
                         for element_dir in os.scandir(element_type_dir):
                             if os.path.isdir(element_dir):
                                 try:
-                                    self.processors[element_type_dir.name](
-                                        element_dir.name, self
-                                    )
+                                    processor(os.path.abspath(element_dir))
 
                                 finally:
-                                    pass
+                                    continue
 
         mod.on_load()
+
+    def process_test_elements(self, path: str):
+        print(f"Test package: {path}")
