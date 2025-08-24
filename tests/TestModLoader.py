@@ -54,8 +54,9 @@ class TestModLoader(unittest.TestCase):
         mod_loader.load_mod("tests/test_mod_7")
 
     def test_element_loading(self):
-        def load_test_element(path: str, ml: sh_mod_loader.mod_loader.ModLoader):
-            print(f"Loading '{path}'...")
-
         mod_loader = sh_mod_loader.mod_loader.ModLoader()
         mod_loader.load_mod("tests/test_mod_8")
+
+    def test_mod_with_relative_import(self):
+        mod_loader = sh_mod_loader.mod_loader.ModLoader()
+        mod_loader.load_mod("tests/test_mod_9")

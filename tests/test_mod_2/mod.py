@@ -1,2 +1,1 @@
-def init():
-    return "Invalid mod type"
+mod = "Invalid mod"
